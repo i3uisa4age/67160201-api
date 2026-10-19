@@ -1,0 +1,257 @@
+openapi: 3.0.3
+info:
+  title: Student API
+  description: API สำหรับจัดการข้อมูลนิสิต พัฒนาในรายวิชา 88736065
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              example: "ข้อมูลไม่ถูกต้อง"
+
+paths:
+  /auth/register:
+    post:
+      summary: สมัครสมาชิกใหม่
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  example: "newstudent@example.com"
+                password:
+                  type: string
+                  example: "Passw0rd!"
+      responses:
+        "201":
+          description: สร้างบัญชีผู้ใช้สำเร็จ
+        "400":
+          description: ข้อมูลไม่ครบถ้วน
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: อีเมลซ้ำในระบบ
+
+  /auth/login:
+    post:
+      summary: เข้าสู่ระบบ
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  example: "admin@example.com"
+                password:
+                  type: string
+                  example: "Passw0rd!"
+      responses:
+        "200":
+          description: เข้าสู่ระบบสำเร็จและคืน JWT token
+        "401":
+          description: อีเมลหรือรหัสผ่านไม่ถูกต้อง
+
+  /auth/me:
+    get:
+      summary: ดูข้อมูลผู้ใช้ปัจจุบัน
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: ดึงข้อมูลสำเร็จ
+        "401":
+          description: ไม่พบ Token หรือ Token ไม่ถูกต้อง
+
+  /students:
+    get:
+      summary: ดึงรายการนิสิตทั้งหมด (มี Pagination)
+      tags:
+        - Students
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: หน้าที่ต้องการดู
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: จำนวนรายการต่อหน้า
+        - in: query
+          name: major
+          schema:
+            type: string
+          description: กรองตามสาขาวิชา
+      responses:
+        "200":
+          description: ดึงรายการนิสิตสำเร็จ
+        "401":
+          description: ไม่ได้รับอนุญาต
+
+    post:
+      summary: เพิ่มข้อมูลนิสิตใหม่ (เฉพาะ Admin)
+      tags:
+        - Students
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - major
+                - email
+              properties:
+                name:
+                  type: string
+                  example: "Alice Smith"
+                major:
+                  type: string
+                  example: "Software Engineering"
+                email:
+                  type: string
+                  example: "alice@example.com"
+      responses:
+        "201":
+          description: เพิ่มข้อมูลสำเร็จ
+        "400":
+          description: ข้อมูลไม่ครบถ้วน
+        "401":
+          description: ไม่ได้รับอนุญาต
+        "403":
+          description: สิทธิ์ไม่เพียงพอ
+        "409":
+          description: อีเมลซ้ำ
+
+  /students/{id}:
+    get:
+      summary: ดึงข้อมูลนิสิตตาม ID
+      tags:
+        - Students
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID ของนิสิต
+          example: 1
+      responses:
+        "200":
+          description: พบข้อมูลนิสิต
+        "404":
+          description: ไม่พบข้อมูลนิสิต
+
+    put:
+      summary: แก้ไขข้อมูลนิสิต (เฉพาะ Admin)
+      tags:
+        - Students
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID ของนิสิต
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - major
+                - email
+              properties:
+                name:
+                  type: string
+                  example: "Alice Updated"
+                major:
+                  type: string
+                  example: "Software Engineering"
+                email:
+                  type: string
+                  example: "alice.u@example.com"
+      responses:
+        "200":
+          description: แก้ไขข้อมูลสำเร็จ
+        "400":
+          description: ข้อมูลไม่ครบถ้วน
+        "404":
+          description: ไม่พบข้อมูลนิสิต
+
+    delete:
+      summary: ลบข้อมูลนิสิต (เฉพาะ Admin)
+      tags:
+        - Students
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID ของนิสิต
+          example: 1
+      responses:
+        "200":
+          description: ลบข้อมูลสำเร็จ
+        "403":
+          description: สิทธิ์ไม่เพียงพอ
+        "404":
+          description: ไม่พบข้อมูลนิสิต

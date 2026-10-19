@@ -1,0 +1,4 @@
+node_modules/
+.env
+backup_wk14.sql
+.DS_Store
